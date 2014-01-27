@@ -1,13 +1,14 @@
 #!/bin/sh
-ROOTPASS=""
-RHN_USER=""
-RHN_PASSWORD=""
+
 #FOREMAN_IP="XX.XX.XX.XX"
 #CONTROLLER_IP="XX.XX.XX.XX"
 #COMPUTE_IP="XX.XX.XX.XX"
 suffix=".scl.lab.tlv.redhat.com"
 USER="admin"
 PASS="changeme"
+ROOTPASS=""
+
+
 usage()
 {
 cat << EOF
@@ -226,20 +227,20 @@ echo  "#########################################################"
 echo  "##     IT MIGHT TAKE A WHILE  - Wait Few Minutes..     ##" 
 echo  "#########################################################"
 
-pdsh -w root@${FOREMAN_IP},root@${CONTROLLER_IP},root@${COMPUTE_IP} /usr/sbin/rhnreg_ks --serverUrl=https://xmlrpc.rhn.redhat.com/XMLRPC --username=${RHN_USER} --password=${RHN_PASSWORD}
+pdsh -w root@${FOREMAN_IP},root@${CONTROLLER_IP},root@${COMPUTE_IP} /usr/sbin/rhnreg_ks --serverUrl=https://xmlrpc.rhn.redhat.com/XMLRPC --username=qa@redhat.com --password=AeGh8phugee5
 
 #registering hosts to rhn-optional-channel:
 ############################################
 
 echo "start registering "$FOREMAN_IP" "$CONTROLLER_IP" "$COMPUTE_IP" to rhn-optional-channel"
 
-pdsh -w root@${FOREMAN_IP},root@${CONTROLLER_IP},root@${COMPUTE_IP} rhn-channel --add --channel rhel-x86_64-server-6-ost-4  -u ${RHN_USER} -p ${RHN_PASSWORD}
+pdsh -w root@${FOREMAN_IP},root@${CONTROLLER_IP},root@${COMPUTE_IP} rhn-channel --add --channel rhel-x86_64-server-6-ost-4  -u -p
 
-pdsh -w root@${FOREMAN_IP},root@${CONTROLLER_IP},root@${COMPUTE_IP} rhn-channel --add --channel rhel-x86_64-server-6 -u ${RHN_USER} -p ${RHN_PASSWORD}
+pdsh -w root@${FOREMAN_IP},root@${CONTROLLER_IP},root@${COMPUTE_IP} rhn-channel --add --channel rhel-x86_64-server-6 -u -p 
 
-pdsh -w root@${FOREMAN_IP},root@${CONTROLLER_IP},root@${COMPUTE_IP} rhn-channel --add --channel rhel-x86_64-server-lb-6 -u ${RHN_USER} -p ${RHN_PASSWORD}
+pdsh -w root@${FOREMAN_IP},root@${CONTROLLER_IP},root@${COMPUTE_IP} rhn-channel --add --channel rhel-x86_64-server-lb-6 -u  -p 
 
-pdsh -w root@${FOREMAN_IP},root@${CONTROLLER_IP},root@${COMPUTE_IP} rhn-channel --add --channel rhel-x86_64-server-6-mrg-messaging-2 -u ${RHN_USER} -p ${RHN_PASSWORD}
+pdsh -w root@${FOREMAN_IP},root@${CONTROLLER_IP},root@${COMPUTE_IP} rhn-channel --add --channel rhel-x86_64-server-6-mrg-messaging-2 -u  -p 
 
 
 #Remove old puppet version from machines:
@@ -337,19 +338,41 @@ echo -e "finish \e[92mLight foreman_client.sh script"
 #-----------------------------------------------------
 echo  "Start change the controller and compute hostGroup"
 
-myssh ${FOREMAN_IP} ${ROOTPASS} "curl -s -H "Accept:application/json" -k -u $USER:$PASS $FOREMAN_URL/hosts/1 -X PUT  -d "host[hostgroup_id]=$CONTROLLER_DEPLOYMENT_NUM"  -o -"
-
-myssh ${FOREMAN_IP} ${ROOTPASS} "curl -s -H "Accept:application/json" -k -u $USER:$PASS $FOREMAN_URL/hosts/2 -X PUT  -d "host[hostgroup_id]=$COMPUTE_DEPLOYMENT_NUM"  -o -"
+CONTROLLER_FQDN=$(myssh ${CONTROLLER_IP} ${ROOTPASS} "hostname")
+myssh ${FOREMAN_IP} ${ROOTPASS} "curl -s -H "Accept:application/json" -k -u $USER:$PASS $FOREMAN_URL/hosts/$CONTROLLER_FQDN -X PUT  -d "host[hostgroup_id]=$CONTROLLER_DEPLOYMENT_NUM"  -o -"
+COMPUTE_FQDN=$(myssh ${COMPUTE_IP} ${ROOTPASS} "hostname")
+myssh ${FOREMAN_IP} ${ROOTPASS} "curl -s -H "Accept:application/json" -k -u $USER:$PASS $FOREMAN_URL/hosts/$COMPUTE_FQDN -X PUT  -d "host[hostgroup_id]=$COMPUTE_DEPLOYMENT_NUM"  -o -"
 
 echo  "Finished change the controller and compute hostGroup"
 
-# Change the hostGroup admin_password in order to run tempest:
-#--------------------------------------------------------------
-echo  "Start Change the hostGroup admin_password in order to run tempest"
+#echo  "Start change the controller and compute hostGroup"
+#myssh ${FOREMAN_IP} ${ROOTPASS} "curl -s -H "Accept:application/json" -k -u $USER:$PASS $FOREMAN_URL/hosts/1 -X PUT  -d "host[hostgroup_id]=$CONTROLLER_DEPLOYMENT_NUM"  -o -"
+#myssh ${FOREMAN_IP} ${ROOTPASS} "curl -s -H "Accept:application/json" -k -u $USER:$PASS $FOREMAN_URL/hosts/2 -X PUT  -d "host[hostgroup_id]=$COMPUTE_DEPLOYMENT_NUM"  -o -"
+#echo  "Finished change the controller and compute hostGroup"
+
+
+# Change defult host groups parameters :
+#--------------------------------
+
+echo  "Start: Change defult host groups parameters"
+
+VLAN_RANGE="int_vlan_range:216:217,int_vlan_range:192"
 
 curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::nova_network::controller/smart_class_parameters/admin_password -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"secret\"} -o -
 
-echo  "Finished change the hostGroup admin_password in order to run tempest"
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::controller/smart_class_parameters/admin_password -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"secret\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::networker/smart_class_parameters/controller_priv_floating_ip -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::networker/smart_class_parameters/mysql_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::networker/smart_class_parameters/qpid_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::networker/smart_class_parameters/ovs_vlan_ranges -X PUT -H "Content-Type: application/json" -d {\"default_value\":\"$VLAN_RANGE\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::networker/smart_class_parameters/enable_tunneling -X PUT -H "Content-Type: application/json" -d {\"default_value\":\"false\"} -o -
+
+echo  "Finished: Change defult host groups parameters"
 
 
 # Running puppet agent on foreman_clients:

@@ -1,11 +1,12 @@
 #!/bin/sh
-OOTPASS=""
+
 #FOREMAN_IP="XX.XX.XX.XX"
 #CONTROLLER_IP="XX.XX.XX.XX"
 #COMPUTE_IP="XX.XX.XX.XX"
 suffix=".scl.lab.tlv.redhat.com"
 USER="admin"
 PASS="changeme"
+ROOTPASS=""
 
 
 usage()

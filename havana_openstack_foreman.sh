@@ -1,11 +1,12 @@
 #!/bin/sh
-ROOTPASS=""
+
 #FOREMAN_IP="XX.XX.XX.XX"
 #CONTROLLER_IP="XX.XX.XX.XX"
 #COMPUTE_IP="XX.XX.XX.XX"
 suffix=".scl.lab.tlv.redhat.com"
 USER="admin"
 PASS="changeme"
+ROOTPASS=""
 
 
 usage()
@@ -188,31 +189,31 @@ ssh-add
 cat >>/tmp/puddle.repo << EOF
 [OpenStack-Havana-Puddle]
 name=OpenStack-Havana-Puddle
-baseurl=`python -c "import urllib2 ; puddle_url = 'http://download.lab.bos.redhat.com/rel-eng/OpenStack/4.0/' ; req = urllib2.Request(puddle_url) ; f = urllib2.urlopen(req) ; ur = [line.split('\"')[5].rstrip('/').strip() for line in f.readlines() if 'folder.gif' in line and '201' in line][-5] ; print puddle_url+ur+'/x86_64/os/'"`
+baseurl=`python -c "import urllib2 ; puddle_url = 'http://download.lab.bos.redhat.com/rel-eng/OpenStack/4.0/' ; req = urllib2.Request(puddle_url) ; f = urllib2.urlopen(req) ; ur = [line.split('\"')[5].rstrip('/').strip() for line in f.readlines() if 'folder.gif' in line and '201' in line][-5] ; print puddle_url+ur+'/RHOS-4.0/\\$basearch/os/'"`
 gpgcheck=0
 enabled=1
 EOF
 
-> /tmp/rhel-updates.repo
-cat >> /tmp/rhel-updates.repo << EOF
-[rhel64-updates]
-name=rhel64-uptades
-baseurl=http://download.lab.bos.redhat.com/sysrepos/rhel6-server-core-x86_64/RPMS.updates/
-enabled=1
-gpgcheck=0
-EOF
+#> /tmp/rhel-updates.repo
+#cat >> /tmp/rhel-updates.repo << EOF
+#[rhel64-updates]
+#name=rhel64-uptades
+#baseurl=http://download.lab.bos.redhat.com/sysrepos/rhel6-server-core-x86_64/RPMS.updates/
+#enabled=1
+#gpgcheck=0
+#EOF
 
 cd /tmp && wget http://shell.bos.redhat.com/~lhh/rhos-other.repo
-
+cd /tmp && wget http://shell.bos.redhat.com/~lhh/rhel-6.5.repo
 echo "Build Repo according latest Havana Puddle"
 
 #Remove old repo files from FOREMAN_IP CONTROLLER_IP COMPUTE_IP
 #--------------------------------------------------------------
-myssh ${FOREMAN_IP} ${ROOTPASS} "rm -rf /etc/yum.repos.d/epel*" || { echo "Failed to remove old repo from  "$FOREMAN_IP", exiting!" ; exit 1 ; }
+myssh ${FOREMAN_IP} ${ROOTPASS} "rm -rf /etc/yum.repos.d/epel* && rm -rf /etc/yum.repos.d/rhel6_update.repo" || { echo "Failed to remove old repo from  "$FOREMAN_IP", exiting!" ; exit 1 ; }
 
-myssh ${CONTROLLER_IP} ${ROOTPASS} "rm -rf /etc/yum.repos.d/epel*" || { echo "Failed to remove old repo from  "$CONTROLLER_IP", exiting!" ; exit 1 ; }
+myssh ${CONTROLLER_IP} ${ROOTPASS} "rm -rf /etc/yum.repos.d/epel* && rm -rf /etc/yum.repos.d/rhel6_update.repo" || { echo "Failed to remove old repo from  "$CONTROLLER_IP", exiting!" ; exit 1 ; }
 
-myssh ${COMPUTE_IP} ${ROOTPASS} "rm -rf /etc/yum.repos.d/epel*" || { echo "Failed to remove old repo from  "$COMPUTE_IP", exiting!" ; exit 1 ; }
+myssh ${COMPUTE_IP} ${ROOTPASS} "rm -rf /etc/yum.repos.d/epel* && rm -rf /etc/yum.repos.d/rhel6_update.repo" || { echo "Failed to remove old repo from  "$COMPUTE_IP", exiting!" ; exit 1 ; }
 
 #echo "Remove old repo files from FOREMAN_IP CONTROLLER_IP COMPUTE_IP"
 
@@ -222,18 +223,18 @@ myssh ${COMPUTE_IP} ${ROOTPASS} "rm -rf /etc/yum.repos.d/epel*" || { echo "Faile
 echo -e "finish \e[92mLight start copy rhel6.5_repo on FOREMAN_IP CONTROLLER_IP COMPUTE_IP"
 
 myscp_from_local "/tmp/puddle.repo" ${ROOTPASS} ${FOREMAN_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$FOREMAN_IP", exiting!" ; exit 1 ; } 
-myscp_from_local "/tmp/rhel-updates.repo" ${ROOTPASS} ${FOREMAN_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$FOREMAN_IP", exiting!" ; exit 1 ; }
+myscp_from_local "/tmp/rhel-6.5.repo" ${ROOTPASS} ${FOREMAN_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$FOREMAN_IP", exiting!" ; exit 1 ; }
 
 myscp_from_local "/tmp/rhos-other.repo" ${ROOTPASS} ${FOREMAN_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$FOREMAN_IP", exiting!" ; exit 1 ; }
 
 myscp_from_local "/tmp/puddle.repo" ${ROOTPASS} ${CONTROLLER_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$FOREMAN_IP", exiting!" ; exit 1 ; }
-myscp_from_local "/tmp/rhel-updates.repo" ${ROOTPASS} ${CONTROLLER_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$CONTROLLER_IP", exiting!" ; exit 1 ; }
+myscp_from_local "/tmp/rhel-6.5.repo" ${ROOTPASS} ${CONTROLLER_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$CONTROLLER_IP", exiting!" ; exit 1 ; }
 
 myscp_from_local "/tmp/rhos-other.repo" ${ROOTPASS} ${CONTROLLER_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$CONTROLLER_IP", exiting!" ; exit 1 ; }
 
 myscp_from_local "/tmp/puddle.repo" ${ROOTPASS} ${COMPUTE_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$COMPUTE_IP", exiting!" ; exit 1 ; } 
 
-myscp_from_local "/tmp/rhel-updates.repo" ${ROOTPASS} ${COMPUTE_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$COMPUTE_IP", exiting!" ; exit 1 ; }
+myscp_from_local "/tmp/rhel-6.5.repo" ${ROOTPASS} ${COMPUTE_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$COMPUTE_IP", exiting!" ; exit 1 ; }
 
 myscp_from_local "/tmp/rhos-other.repo" ${ROOTPASS} ${COMPUTE_IP} "/etc/yum.repos.d/" || { echo "Failed to copy file to "$COMPUTE_IP", exiting!" ; exit 1 ; }
 
@@ -264,7 +265,7 @@ pdsh -w root@${FOREMAN_IP},root@${CONTROLLER_IP},root@${COMPUTE_IP} yum remove p
 #Installing openstack-foreman-installer on FOREMAN_IP
 #----------------------------------------------------
 echo -e "start \e[92mLight openstack-foreman-installer -  installation"
-myssh ${FOREMAN_IP} ${ROOTPASS} "yum install openstack-foreman-installer -y" 
+myssh ${FOREMAN_IP} ${ROOTPASS} "yum install openstack-foreman-installer -y" || { echo "Failed to install openstack-foreman-installer, exiting!" ; exit 1 ; }
 echo -e "finish \e[92mLight openstack-foreman-installer -  installation"
 
 
@@ -330,32 +331,138 @@ myssh ${FOREMAN_IP} ${ROOTPASS} "sshpass -p '${ROOTPASS}' /usr/bin/scp -o Strict
 
 echo -e "finsh \e[92mLight copying foreman_client.sh into controller and compute nodes"
 
-
 #starting foreman_client.sh script on controller and compute nodes:
-#-------------------------------------------------------------------
+#------------------------------------------------------------------
 echo -e "start \e[92mLight foreman_client.sh script"
 myssh ${CONTROLLER_IP} ${ROOTPASS} "bash /root/foreman_client.sh"  
 myssh ${COMPUTE_IP} ${ROOTPASS} "bash /root/foreman_client.sh"
 echo -e "finish \e[92mLight foreman_client.sh script"
 
 
-# Add foreman_clients to controller/compute hostGroup
-#-----------------------------------------------------
-echo  "Start change the controller and compute hostGroup"
+# Change defult host groups parameters :
+#--------------------------------
 
-myssh ${FOREMAN_IP} ${ROOTPASS} "curl -s -H "Accept:application/json" -k -u $USER:$PASS $FOREMAN_URL/hosts/1 -X PUT  -d "host[hostgroup_id]=$CONTROLLER_DEPLOYMENT_NUM"  -o -"
+echo  "Start: Change defult host groups parameters"
 
-myssh ${FOREMAN_IP} ${ROOTPASS} "curl -s -H "Accept:application/json" -k -u $USER:$PASS $FOREMAN_URL/hosts/2 -X PUT  -d "host[hostgroup_id]=$COMPUTE_DEPLOYMENT_NUM"  -o -"
+VLAN_RANGE="int_vlan_range:216:217,int_vlan_range:192"
 
-echo  "Finished change the controller and compute hostGroup"
-
-# Change the hostGroup admin_password in order to run tempest:
-#--------------------------------------------------------------
-echo  "Start Change the hostGroup admin_password in order to run tempest"
+echo  "Change default host group parameters Controller (Nova Network)"
 
 curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::nova_network::controller/smart_class_parameters/admin_password -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"secret\"} -o -
 
-echo  "Finished change the hostGroup admin_password in order to run tempest"
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::nova_network::controller/smart_class_parameters/controller_priv_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::nova_network::controller/smart_class_parameters/controller_pub_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::nova_network::controller/smart_class_parameters/mysql_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::nova_network::controller/smart_class_parameters/qpid_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+echo  "Change default host group parameters Compute (Nova Compute)"
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::nova_network::compute/smart_class_parameters/admin_password -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"secret\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::nova_network::compute/smart_class_parameters/controller_priv_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::nova_network::compute/smart_class_parameters/controller_pub_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::nova_network::compute/smart_class_parameters/mysql_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::nova_network::compute/smart_class_parameters/qpid_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+
+echo  "Change default host group parameters Neutron-Controller (Neutron-Controller)"
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::controller/smart_class_parameters/admin_password -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"secret\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::controller/smart_class_parameters/controller_priv_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::controller/smart_class_parameters/controller_pub_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::controller/smart_class_parameters/mysql_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::controller/smart_class_parameters/qpid_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::controller/smart_class_parameters/enable_tunneling -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"false\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::controller/smart_class_parameters/ovs_vlan_ranges -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$VLAN_RANGE\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::controller/smart_class_parameters/tenant_network_type -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"vlan\"} -o -
+
+
+echo  "Change default host group parameters Neutron-Compute (Neutron-Compute)"
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::compute/smart_class_parameters/admin_password -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"secret\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::compute/smart_class_parameters/controller_priv_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::compute/smart_class_parameters/controller_pub_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::compute/smart_class_parameters/mysql_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::compute/smart_class_parameters/qpid_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::compute/smart_class_parameters/enable_tunneling -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"false\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::compute/smart_class_parameters/tenant_network_type -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"vlan\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::compute/smart_class_parameters/ovs_vlan_ranges -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$VLAN_RANGE\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::compute/smart_class_parameters/ovs_bridge_mappings -X PUT  -H "Content-Type: application/json" -d {\"default_value\":[\"inter-vlan:br-eth3\"]} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::compute/smart_class_parameters/ovs_bridge_uplinks -X PUT  -H "Content-Type: application/json" -d {\"default_value\":[\"br-eth3:eth3\"]} -o -
+
+echo  "Change default host group parameters Neutron-Networker (Neutron-Networker)"
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::networker/smart_class_parameters/controller_priv_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::networker/smart_class_parameters/mysql_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::networker/smart_class_parameters/qpid_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::networker/smart_class_parameters/tenant_network_type -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"vlan\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::networker/smart_class_parameters/ovs_bridge_mappings -X PUT  -H "Content-Type: application/json" -d {\"default_value\":[\"inter-vlan:br-eth3","ext-vlan:br-ex\"]} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::neutron::networker/smart_class_parameters/ovs_bridge_uplinks -X PUT  -H "Content-Type: application/json" -d {\"default_value\":[\"br-eth3:eth3","br-ex:eth3.195\"]} -o -
+
+echo  "Change default host group parameters LVM Block Storage (Cinder)"
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::storage_backend::lvm_cinder/smart_class_parameters/controller_priv_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::storage_backend::lvm_cinder/smart_class_parameters/mysql_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::storage_backend::lvm_cinder/smart_class_parameters/qpid_host -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+echo  "Change default host group parameters Load Balancer (Load-Balancer)"
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::load_balancer/smart_class_parameters/lb_private_vip -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://${FOREMAN_IP}/api/puppetclasses/quickstack::load_balancer/smart_class_parameters/lb_public_vip -X PUT  -H "Content-Type: application/json" -d {\"default_value\":\"$CONTROLLER_IP\"} -o -
+
+
+#Example How to change a sepcific host parameter
+#----------------------------------------
+#  curl -s -H "Accept:application/json,version=2" -k -u admin:changeme https://10.35.160.87/api/hosts/cougar14.scl.lab.tlv.redhat.com/smart_class_parameters/327/override_values -X POST -H "Content-Type: application/json" -d "{\"match\":\"fqdn=cougar14.scl.lab.tlv.redhat.com\", \"value\": \"false\"}"  -o -
+
+
+echo  "Finished: Change defult host groups parameters"
+
+
+# Add foreman_clients to controller/compute hostGroup
+#----------------------------------------------------
+
+echo  "Start change the controller and compute hostGroup"
+
+CONTROLLER_FQDN=$(myssh ${CONTROLLER_IP} ${ROOTPASS} "hostname")
+
+myssh ${FOREMAN_IP} ${ROOTPASS} "curl -s -H "Accept:application/json" -k -u $USER:$PASS $FOREMAN_URL/hosts/$CONTROLLER_FQDN -X PUT  -d "host[hostgroup_id]=$CONTROLLER_DEPLOYMENT_NUM"  -o -"
+
+COMPUTE_FQDN=$(myssh ${COMPUTE_IP} ${ROOTPASS} "hostname")
+
+myssh ${FOREMAN_IP} ${ROOTPASS} "curl -s -H "Accept:application/json" -k -u $USER:$PASS $FOREMAN_URL/hosts/$COMPUTE_FQDN -X PUT  -d "host[hostgroup_id]=$COMPUTE_DEPLOYMENT_NUM"  -o -"
+
+echo  "Finished change the controller and compute hostGroup"
 
 
 # Running puppet agent on foreman_clients:
@@ -364,7 +471,10 @@ echo  "Finished change the hostGroup admin_password in order to run tempest"
 echo  "Start running puppet agent on foreman_clients"
 myssh ${CONTROLLER_IP} ${ROOTPASS} "puppet agent -t -v"
 myssh ${COMPUTE_IP} ${ROOTPASS} "puppet agent -t -v"
+myssh ${FOREMAN_IP} ${ROOTPASS} "service puppet stop"
 echo  "Finish running puppet agent on foreman_clients"
+
+
 
 echo "#################################################################"
 echo "# The script finish to deploy openstack using openstack-foreman #"
