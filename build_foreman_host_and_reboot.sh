@@ -1,6 +1,6 @@
 #!/bin/sh
-FOREMAN_URL="https://theforeman.eng.lab.tlv.redhat.com"
-suffix=".scl.lab.tlv.redhat.com"
+FOREMAN_URL="https://theforeman.com"
+suffix=".domain"
 USER="hostbuilder"
 PASS=""
 
